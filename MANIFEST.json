@@ -1,0 +1,22 @@
+{
+  "product": "Component Preview",
+  "type": "SaaS build documentation pack",
+  "generated": "2026-10-03",
+  "files": [
+    "README.md",
+    "docs/01_PRD.md",
+    "docs/02_ARCHITECTURE.md",
+    "docs/03_MVP_SCOPE.md",
+    "docs/04_DATA_MODEL.md",
+    "docs/05_SECURITY_SANDBOX.md",
+    "docs/06_UI_UX_SPEC.md",
+    "docs/07_API_SPEC.md",
+    "docs/08_IMPLEMENTATION_PLAN.md",
+    "docs/09_AGENT_INSTRUCTIONS.md",
+    "docs/10_ACCEPTANCE_CRITERIA.md",
+    "docs/11_TEST_PLAN.md",
+    "docs/12_JULES_BOOTSTRAP_PROMPT.md",
+    "prompts/13_STITCH_PROMPT.md",
+    "prompts/14_STITCH_SCREEN_ORDER.md"
+  ]
+}
