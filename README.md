@@ -1,45 +1,36 @@
-# Component Preview SaaS — Build Pack
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A production-oriented specification for a SaaS that lets developers write or paste React/TSX components and preview them live in the browser.
+## Getting Started
 
-## Core idea
+First, run the development server:
 
-**Input:** a `.tsx` component  
-**Experience:** code editor + instant isolated preview  
-**Output:** working component preview, copyable TSX, shareable URL, saved project/component.
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-The product is intentionally positioned as a developer tool, not an AI design generator.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Suggested product positioning
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-> Write a component. See it live. Ship the code.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Primary stack
+## Learn More
 
-- Next.js App Router + TypeScript
-- Tailwind CSS
-- shadcn/ui for internal product UI
-- Monaco Editor for code editing
-- Sandpack / browser-side React runtime for the preview sandbox
-- Supabase for auth + database + storage
-- Vercel deployment
-- Zod for validation
-- Playwright for end-to-end testing
+To learn more about Next.js, take a look at the following resources:
 
-## MVP principle
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-The preview runtime must remain isolated from the main application. Never execute user-authored TSX directly in the Next.js application process.
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Build order
+## Deploy on Vercel
 
-1. Product shell
-2. Editor/preview workspace
-3. Sandbox runtime
-4. Errors + console
-5. Save/share
-6. Auth/workspaces
-7. Export/copy
-8. Polish + tests
-9. Billing/usage later
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-See the other documents for detailed requirements.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
