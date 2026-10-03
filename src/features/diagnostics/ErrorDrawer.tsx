@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, ChevronUp, ChevronDown, Terminal, X } from 'lucide-react'
+import { AlertCircle, ChevronUp, ChevronDown, X } from 'lucide-react'
 import { useState } from 'react'
 
 interface ErrorDrawerProps {

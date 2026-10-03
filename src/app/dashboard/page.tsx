@@ -35,7 +35,7 @@ export default function DashboardPage() {
                 name: item.title || 'Untitled Local Project',
                 updated_at: item.updated_at || new Date().toISOString(),
               })
-            } catch (e) {}
+            } catch {}
           }
         }
         setProjects(localProjects)
@@ -55,7 +55,7 @@ export default function DashboardPage() {
             <p className="text-xs text-zinc-400 mt-1">Manage and reopen saved React component previews.</p>
           </div>
           <Link
-            href="/"
+            href="/workspace/new"
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-100 hover:bg-white text-zinc-950 font-medium text-xs rounded transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -71,7 +71,7 @@ export default function DashboardPage() {
             <h3 className="text-sm font-medium text-zinc-300">No components saved yet</h3>
             <p className="text-xs text-zinc-500 mt-1 mb-4">Create your first component in the live workspace.</p>
             <Link
-              href="/"
+              href="/workspace/new"
               className="inline-flex items-center space-x-1 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs rounded transition-colors"
             >
               <span>Open Workspace</span>
@@ -83,7 +83,7 @@ export default function DashboardPage() {
             {projects.map((proj) => (
               <Link
                 key={proj.id}
-                href="/"
+                href="/workspace/new"
                 className="group p-4 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors flex flex-col justify-between"
               >
                 <div>
