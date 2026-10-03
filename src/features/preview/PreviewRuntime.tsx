@@ -102,7 +102,7 @@ export function PreviewRuntime({ code, onErrorChange, onStatusChange }: PreviewR
     try {
       const res = transform(code, {
         transforms: ['jsx', 'typescript', 'imports'],
-        production: true,
+        production: false,
       })
       return { code: res.code, error: null }
     } catch (err: unknown) {
