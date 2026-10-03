@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Code2, LayoutDashboard, Share2, Save, Download, Play, RefreshCw, Layers } from 'lucide-react'
+import { Code2, LayoutDashboard, Share2, Save, Download, RefreshCw, Layers } from 'lucide-react'
 
 interface NavbarProps {
   title?: string

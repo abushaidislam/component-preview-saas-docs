@@ -2,11 +2,11 @@
 
 import { SandpackProvider, SandpackPreview, SandpackConsole, useSandpack } from '@codesandbox/sandpack-react'
 import { useState, useEffect } from 'react'
-import { Monitor, Tablet, Smartphone, Moon, Sun, Terminal, AlertTriangle, RotateCcw } from 'lucide-react'
+import { Monitor, Tablet, Smartphone, Moon, Sun, Terminal, RotateCcw } from 'lucide-react'
 
 interface PreviewRuntimeProps {
   code: string
-  onLogsChange?: (logs: Array<{ type: string; message: string }>) => void
+  onLogsChange?: (logs: unknown[]) => void
   onErrorChange?: (error: string | null) => void
 }
 
@@ -22,7 +22,7 @@ function PreviewListener({
   onLogsChange,
   onErrorChange,
 }: {
-  onLogsChange?: (logs: Array<{ type: string; message: string }>) => void
+  onLogsChange?: (logs: unknown[]) => void
   onErrorChange?: (error: string | null) => void
 }) {
   const { sandpack } = useSandpack()
