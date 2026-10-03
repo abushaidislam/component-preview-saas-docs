@@ -6,7 +6,8 @@ import { useState } from 'react'
 export type ErrorDrawerTab = 'errors' | 'console' | 'warnings'
 
 interface ErrorDrawerProps {
-  error: { code?: string; message: string } | null
+  error: string | null
+
   logs?: Array<{ id: string; type: string; message: string; timestamp: string }>
   warnings?: Array<string>
   onClear?: () => void
@@ -18,7 +19,7 @@ export function ErrorDrawer({ error, logs = [], warnings = [], onClear, isOpen, 
   const [copied, setCopied] = useState(false)
   const [activeTab, setActiveTab] = useState<ErrorDrawerTab>('errors')
 
-  const errorMsg = typeof error === 'string' ? error : error?.message
+  const errorMsg = error
 
   if (!error && logs.length === 0 && warnings.length === 0 && !isOpen) return null
 

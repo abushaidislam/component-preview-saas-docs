@@ -13,7 +13,7 @@ export function PreviewPane({
   renderCount,
   sandpackKey,
   setRuntimeError,
-}: any) {
+}: { code: string; engine: "direct" | "sandpack"; viewport: "desktop" | "tablet" | "mobile"; themeMode: "dark" | "light"; activeError: string | null; evaluated: { Component: React.ComponentType | null; error: string | null }; renderCount: number; sandpackKey: number; setRuntimeError: (err: { code: string; message: string } | null) => void }) {
   const LiveComponent = evaluated.Component
   const getViewportWidth = () => {
     switch (viewport) {

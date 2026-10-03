@@ -29,15 +29,20 @@ export function WorkspaceView({ initialProjectId }: WorkspaceViewProps) {
   const router = useRouter()
   const [code, setCode] = useState<string>(DEFAULT_TEMPLATE)
   const [debouncedCode, setDebouncedCode] = useState<string>(DEFAULT_TEMPLATE)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedCode(code), 400)
+    return () => clearTimeout(timer)
+  }, [code])
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false)
   const [title, setTitle] = useState<string>('Interactive React Card')
   const [projectId, setProjectId] = useState<string | undefined>(initialProjectId)
   const [isSaved, setIsSaved] = useState(true)
   const [versionNumber, setVersionNumber] = useState(1)
   const [versions, setVersions] = useState<VersionSnapshot[]>([])
-  const [runtimeError, setRuntimeError] = useState<{ code?: string; message: string } | null>(null)
-  const [logs, setLogs] = useState<Array<{ id: string; type: string; message: string; timestamp: string }>>([])
+  const [runtimeError, setRuntimeError] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [logs, setLogs] = useState<Array<{ id: string; type: string; message: string; timestamp: string }>>([])
 
   // Split-pane Resizer state
   const [splitPercent, setSplitPercent] = useState<number>(50)
@@ -143,16 +148,10 @@ export function WorkspaceView({ initialProjectId }: WorkspaceViewProps) {
 
   // Debounced auto-draft saving and preview code
   const draftTimer = useRef<NodeJS.Timeout | null>(null)
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null)
 
   const handleCodeChange = (newCode: string) => {
     setCode(newCode)
     setIsSaved(false)
-
-    if (debounceTimer.current) clearTimeout(debounceTimer.current)
-    debounceTimer.current = setTimeout(() => {
-      setDebouncedCode(newCode)
-    }, 400) // 400ms debounce for Preview
 
     if (draftTimer.current) clearTimeout(draftTimer.current)
     draftTimer.current = setTimeout(() => {
@@ -160,12 +159,11 @@ export function WorkspaceView({ initialProjectId }: WorkspaceViewProps) {
     }, 800) // 800ms debounce for Draft
   }
 
-
   const handleSave = useCallback(async () => {
     const res = await saveProjectAndVersion({
       title,
       source: code,
-      projectId,
+      projectId: projectId || undefined,
       versionNote: `Snapshot ${versionNumber + 1}`,
     })
 
@@ -391,7 +389,7 @@ export function WorkspaceView({ initialProjectId }: WorkspaceViewProps) {
               viewport={viewport}
               refreshToggle={refreshToggle}
               onErrorChange={(err) => setRuntimeError(typeof err === "string" ? err : null)}
-              onLogsChange={(l) => setLogs(l as any)}
+              onLogsChange={(l) => setLogs(l)}
             />
           </div>
           <ErrorDrawer

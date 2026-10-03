@@ -3,9 +3,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import * as LucideIcons from 'lucide-react'
 import {
-  Monitor,
-  Tablet,
-  Smartphone,
   Moon,
   Sun,
   Terminal,
@@ -15,22 +12,22 @@ import {
   RefreshCw,
   Cpu,
   Layers,
-  AlertTriangle,
   Play,
   RotateCcw,
 } from 'lucide-react'
 import { transform } from 'sucrase'
 import { PreviewPane } from './PreviewPane'
-import { ViewportToolbar } from './ViewportToolbar'
-import { SandpackProvider, SandpackPreview } from '@codesandbox/sandpack-react'
 
 export type PreviewStatus = 'idle' | 'compiling' | 'ready' | 'compile-error' | 'runtime-error'
 
 interface PreviewRuntimeProps {
   code: string
-  onLogsChange?: (logs: Array<{ type: string; message: string }>) => void
+  viewport?: 'desktop' | 'tablet' | 'mobile'
+  refreshToggle?: boolean
+
   onErrorChange?: (error: string | null) => void
   onStatusChange?: (status: PreviewStatus) => void
+  onLogsChange?: (logs: Array<{ id: string; type: string; message: string; timestamp: string }>) => void
 }
 
 interface ConsoleLog {
@@ -41,14 +38,17 @@ interface ConsoleLog {
 }
 
 // React Error Boundary for isolating user component errors
-export function PreviewRuntime({ code, onErrorChange, onStatusChange }: PreviewRuntimeProps) {
+export function PreviewRuntime({ code, viewport = "desktop", refreshToggle, onErrorChange, onStatusChange, onLogsChange }: PreviewRuntimeProps) {
   const [engine, setEngine] = useState<'direct' | 'sandpack'>('direct')
-  const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark')
   const [activeTab, setActiveTab] = useState<'preview' | 'console'>('preview')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [runtimeError, setRuntimeError] = useState<{ code: string; message: string } | null>(null)
   const [logs, setLogs] = useState<ConsoleLog[]>([])
+
+  useEffect(() => {
+    if (onLogsChange) onLogsChange(logs)
+  }, [logs, onLogsChange])
   const [renderCount, setRenderCount] = useState(0)
   const [sandpackKey, setSandpackKey] = useState(0)
 
@@ -161,17 +161,7 @@ export function PreviewRuntime({ code, onErrorChange, onStatusChange }: PreviewR
   }, [activeError, evaluated.error, onErrorChange, onStatusChange])
 
   // Viewport container width calculation
-  const getViewportWidth = () => {
-    switch (viewport) {
-      case 'mobile':
-        return 'w-[375px]'
-      case 'tablet':
-        return 'w-[768px]'
-      case 'desktop':
-      default:
-        return 'w-full'
-    }
-  }
+
 
   useEffect(() => {
     handleRestart()
@@ -202,52 +192,6 @@ export function PreviewRuntime({ code, onErrorChange, onStatusChange }: PreviewR
     window.open(url, '_blank')
   }
 
-  // Files for optional Sandpack engine
-  const sandpackFiles = useMemo(
-    () => ({
-      '/public/index.html': `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Preview</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      body {
-        margin: 0;
-        background-color: ${themeMode === 'dark' ? '#09090b' : '#ffffff'};
-        color: ${themeMode === 'dark' ? '#f4f4f5' : '#09090b'};
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1.5rem;
-      }
-      #root { width: 100%; }
-    </style>
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>`,
-      '/App.tsx': code,
-      '/index.tsx': `import React, { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import "./styles.css";
-import App from "./App";
-
-const root = createRoot(document.getElementById("root")!);
-root.render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-);`,
-      '/styles.css': `body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; }`,
-    }),
-    [code, themeMode]
-  )
-
-  const LiveComponent = evaluated.Component
 
   return (
     <div

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ViewportToolbar } from '@/features/preview/ViewportToolbar'
 import {
   Code2,
   Share2,
@@ -10,9 +11,6 @@ import {
   History,
   Sparkles,
   RefreshCw,
-  Monitor,
-  Tablet,
-  Smartphone,
   TerminalSquare
 } from 'lucide-react'
 
@@ -82,35 +80,7 @@ export function WorkspaceHeader({
       {/* Center: Viewport & Run Controls */}
       <div className="flex items-center space-x-2 flex-1 justify-center">
         {onChangeViewport && (
-          <div className="flex items-center space-x-0.5 border border-zinc-800 rounded p-0.5 bg-zinc-900">
-            <button
-              onClick={() => onChangeViewport('desktop')}
-              className={`p-1 rounded transition-colors ${
-                viewport === 'desktop' ? 'bg-zinc-800 text-white shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Desktop View (100%)"
-            >
-              <Monitor className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => onChangeViewport('tablet')}
-              className={`p-1 rounded transition-colors ${
-                viewport === 'tablet' ? 'bg-zinc-800 text-white shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Tablet View (768px)"
-            >
-              <Tablet className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => onChangeViewport('mobile')}
-              className={`p-1 rounded transition-colors ${
-                viewport === 'mobile' ? 'bg-zinc-800 text-white shadow-xs' : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Mobile View (375px)"
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <ViewportToolbar viewport={viewport} onChange={onChangeViewport} />
         )}
 
         {onRefresh && (
