@@ -143,6 +143,8 @@ Technical metrics:
 - main-app memory usage
 - client JS bundle size
 
+
+-----------------------------
 ## 9. UX quality bar
 
 The UI must feel:
