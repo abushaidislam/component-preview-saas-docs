@@ -1,90 +1,182 @@
 import { createClient } from '@/lib/supabase/client'
+import { TEMPLATES } from '@/lib/templates'
 
-export const DEFAULT_TEMPLATE = `import React, { useState } from 'react';
-import { Sparkles, Heart, Share2 } from 'lucide-react';
+export const DEFAULT_TEMPLATE = TEMPLATES[0].code
 
-export default function CardComponent() {
-  const [likes, setLikes] = useState(42);
-  const [liked, setLiked] = useState(false);
-
-  const toggleLike = () => {
-    setLiked(!liked);
-    setLikes(prev => (liked ? prev - 1 : prev + 1));
-  };
-
-  return (
-    <div className="max-w-sm mx-auto bg-zinc-900 border border-zinc-800 rounded-xl p-5 text-zinc-100 shadow-xl font-sans">
-      <div className="flex items-center justify-between mb-4">
-        <span className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Component Preview
-        </span>
-        <button className="text-zinc-400 hover:text-zinc-200 transition">
-          <Share2 className="w-4 h-4" />
-        </button>
-      </div>
-
-      <h3 className="text-lg font-semibold text-white tracking-tight mb-2">
-        Interactive React Card
-      </h3>
-      <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-        Edit this component in Monaco Editor on the left and watch the live preview render instantly in Sandpack.
-      </p>
-
-      <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
-        <button
-          onClick={toggleLike}
-          className={\`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors \${
-            liked
-              ? 'bg-rose-950/80 text-rose-300 border border-rose-800'
-              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
-          }\`}
-        >
-          <Heart className={\`w-3.5 h-3.5 \${liked ? 'fill-rose-400 text-rose-400' : ''}\`} />
-          <span>{likes} Likes</span>
-        </button>
-
-        <span className="text-xs text-zinc-500 font-mono">App.tsx</span>
-      </div>
-    </div>
-  );
+export interface VersionSnapshot {
+  id: string
+  version_number: number
+  source: string
+  created_at: string
+  note?: string
 }
-`
+
+export interface StoredProject {
+  id: string
+  name: string
+  title?: string
+  source: string
+  description?: string
+  created_at: string
+  updated_at: string
+  versions?: VersionSnapshot[]
+}
+
+const LOCAL_DRAFT_KEY = 'component_preview_current_draft'
+
+export function getLocalDraft(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(LOCAL_DRAFT_KEY)
+}
+
+export function setLocalDraft(code: string): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(LOCAL_DRAFT_KEY, code)
+}
+
+export function clearLocalDraft(): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(LOCAL_DRAFT_KEY)
+}
+
+export async function getProjectById(projectId: string): Promise<StoredProject | null> {
+  if (typeof window === 'undefined') return null
+
+  // Check Supabase if configured
+  try {
+    const supabase = createClient()
+    const { data: proj, error } = await supabase
+      .from('projects')
+      .select('id, name, description, created_at, updated_at')
+      .eq('id', projectId)
+      .single()
+
+    if (!error && proj) {
+      const { data: comp } = await supabase
+        .from('components')
+        .select('id')
+        .eq('project_id', proj.id)
+        .single()
+
+      if (comp) {
+        const { data: versions } = await supabase
+          .from('component_versions')
+          .select('id, version_number, source, created_at')
+          .eq('component_id', comp.id)
+          .order('version_number', { ascending: false })
+
+        const latestSource = versions?.[0]?.source || DEFAULT_TEMPLATE
+
+        return {
+          id: proj.id,
+          name: proj.name,
+          title: proj.name,
+          source: latestSource,
+          created_at: proj.created_at,
+          updated_at: proj.updated_at,
+          versions: versions || [],
+        }
+      }
+    }
+  } catch {
+    // Continue to local storage fallback
+  }
+
+  // Check localStorage
+  const item = localStorage.getItem(`project_${projectId}`)
+  if (item) {
+    try {
+      const parsed = JSON.parse(item)
+      return {
+        id: parsed.id,
+        name: parsed.name || parsed.title || 'Untitled Project',
+        title: parsed.name || parsed.title || 'Untitled Project',
+        source: parsed.source || DEFAULT_TEMPLATE,
+        created_at: parsed.created_at || new Date().toISOString(),
+        updated_at: parsed.updated_at || new Date().toISOString(),
+        versions: parsed.versions || [
+          {
+            id: 'v1',
+            version_number: 1,
+            source: parsed.source || DEFAULT_TEMPLATE,
+            created_at: parsed.created_at || new Date().toISOString(),
+          },
+        ],
+      }
+    } catch {
+      return null
+    }
+  }
+
+  return null
+}
 
 export async function saveProjectAndVersion({
   title,
   source,
   projectId,
+  versionNote,
 }: {
   title: string
   source: string
   projectId?: string
-}) {
-  const supabase = createClient()
+  versionNote?: string
+}): Promise<{ success: boolean; projectId?: string; isLocal?: boolean; versionNumber?: number; error?: string }> {
+  let user = null
+  let supabase = null
 
-  // Get current user session
-  const { data: { user } } = await supabase.auth.getUser()
+  try {
+    supabase = createClient()
+    const { data } = await supabase.auth.getUser()
+    user = data?.user ?? null
+  } catch {
+    user = null
+  }
 
-  if (!user) {
-    // Save to local storage if unauthenticated
-    const localId = projectId || `local_${Date.now()}`
-    const localProject = {
-      id: localId,
+  if (!user || !supabase) {
+    // Save to local storage
+    const currentId = projectId && !projectId.startsWith('remote_') ? projectId : `local_${Date.now()}`
+    const existing = localStorage.getItem(`project_${currentId}`)
+    let versions: VersionSnapshot[] = []
+
+    if (existing) {
+      try {
+        const parsed = JSON.parse(existing)
+        versions = parsed.versions || []
+      } catch {}
+    }
+
+    const nextVer = versions.length + 1
+    const newVersion: VersionSnapshot = {
+      id: `v_${Date.now()}`,
+      version_number: nextVer,
+      source,
+      created_at: new Date().toISOString(),
+      note: versionNote || `Version ${nextVer}`,
+    }
+
+    const localProject: StoredProject = {
+      id: currentId,
+      name: title,
       title,
       source,
+      created_at: existing ? JSON.parse(existing).created_at : new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      versions: [newVersion, ...versions],
     }
-    localStorage.setItem(`project_${localId}`, JSON.stringify(localProject))
-    return { success: true, projectId: localId, isLocal: true }
+
+    localStorage.setItem(`project_${currentId}`, JSON.stringify(localProject))
+    setLocalDraft(source)
+    return { success: true, projectId: currentId, isLocal: true, versionNumber: nextVer }
   }
 
   try {
     let currentProjectId = projectId
 
     if (!currentProjectId || currentProjectId.startsWith('local_')) {
-      // Create new project
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36)
-      const { data: newProj, error: projErr } = await (supabase
-        .from('projects') as any)
+      const { data: newProj, error: projErr } = await supabase
+        .from('projects')
         .insert({
           user_id: user.id,
           name: title,
@@ -94,11 +186,11 @@ export async function saveProjectAndVersion({
         .single()
 
       if (projErr) throw projErr
+      if (!newProj) throw new Error('Failed to create project')
       currentProjectId = newProj.id
 
-      // Create component
-      const { data: newComp, error: compErr } = await (supabase
-        .from('components') as any)
+      const { data: newComp, error: compErr } = await supabase
+        .from('components')
         .insert({
           project_id: currentProjectId,
           name: title,
@@ -108,44 +200,51 @@ export async function saveProjectAndVersion({
         .single()
 
       if (compErr) throw compErr
+      if (!newComp) throw new Error('Failed to create component')
 
-      // Create initial version
-      const { error: verErr } = await (supabase.from('component_versions') as any).insert({
+      const { error: verErr } = await supabase.from('component_versions').insert({
         component_id: newComp.id,
         version_number: 1,
         source,
+        preview_config: { note: versionNote || 'Initial Snapshot' },
       })
 
       if (verErr) throw verErr
+
+      setLocalDraft(source)
+      return { success: true, projectId: currentProjectId, isLocal: false, versionNumber: 1 }
     } else {
-      // Fetch component
-      const { data: comp } = await (supabase
-        .from('components') as any)
+      const { data: comp } = await supabase
+        .from('components')
         .select('id')
         .eq('project_id', currentProjectId)
         .single()
 
+      let nextVerNum = 1
       if (comp) {
-        // Fetch latest version number
-        const { data: latestVer } = await (supabase
-          .from('component_versions') as any)
+        const { data: latestVer } = await supabase
+          .from('component_versions')
           .select('version_number')
           .eq('component_id', comp.id)
           .order('version_number', { ascending: false })
           .limit(1)
           .single()
 
-        const nextVerNum = (latestVer?.version_number || 0) + 1
+        nextVerNum = (latestVer?.version_number || 0) + 1
 
-        await (supabase.from('component_versions') as any).insert({
+        await supabase.from('component_versions').insert({
           component_id: comp.id,
           version_number: nextVerNum,
           source,
+          preview_config: { note: versionNote || `Version ${nextVerNum}` },
         })
       }
-    }
 
-    return { success: true, projectId: currentProjectId, isLocal: false }
+      await supabase.from('projects').update({ updated_at: new Date().toISOString(), name: title }).eq('id', currentProjectId)
+
+      setLocalDraft(source)
+      return { success: true, projectId: currentProjectId, isLocal: false, versionNumber: nextVerNum }
+    }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('Save project error:', message)
@@ -153,13 +252,44 @@ export async function saveProjectAndVersion({
   }
 }
 
-export async function createShareToken(source: string) {
-  const token = Math.random().toString(36).substring(2, 12) + Date.now().toString(36)
-  localStorage.setItem(`share_${token}`, source)
+export async function deleteProject(projectId: string): Promise<boolean> {
+  if (typeof window === 'undefined') return false
+
+  // Remove local
+  localStorage.removeItem(`project_${projectId}`)
+
+  // Remove Supabase
+  try {
+    const supabase = createClient()
+    await supabase.from('projects').delete().eq('id', projectId)
+  } catch {}
+
+  return true
+}
+
+export async function createShareToken(source: string, title: string = 'Component Preview'): Promise<string> {
+  const token = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).slice(-4)
+  const payload = {
+    source,
+    title,
+    created_at: new Date().toISOString(),
+  }
+  localStorage.setItem(`share_${token}`, JSON.stringify(payload))
   return token
 }
 
-export async function getSharedSource(token: string) {
-  const source = localStorage.getItem(`share_${token}`)
-  return source || null
+export async function getSharedSource(token: string): Promise<{ source: string; title: string } | null> {
+  if (typeof window === 'undefined') return null
+  const raw = localStorage.getItem(`share_${token}`)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw)
+    if (typeof parsed === 'string') {
+      return { source: parsed, title: 'Shared Component' }
+    }
+    return { source: parsed.source, title: parsed.title || 'Shared Component' }
+  } catch {
+    return { source: raw, title: 'Shared Component' }
+  }
 }
