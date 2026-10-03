@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CodeEditor } from '@/features/editor/CodeEditor'
+import { EditorPane as CodeEditor } from '@/features/preview/EditorPane'
 import { PreviewRuntime } from '@/features/preview/PreviewRuntime'
 import { getSharedSource, setLocalDraft } from '@/features/projects/projectService'
 import {

@@ -14,7 +14,7 @@ if (typeof window !== 'undefined') {
   })
 }
 
-interface CodeEditorProps {
+interface EditorPaneProps {
   code: string
   onChange: (value: string) => void
   readOnly?: boolean
@@ -22,7 +22,7 @@ interface CodeEditorProps {
   onReset?: () => void
 }
 
-export function CodeEditor({ code, onChange, readOnly = false, onReset }: CodeEditorProps) {
+export function EditorPane({ code, onChange, readOnly = false, onReset }: EditorPaneProps) {
   const [copied, setCopied] = useState(false)
   const [isFormatting, setIsFormatting] = useState(false)
   // Default to instant, zero-latency plain editor so user is NEVER blocked by CDN loading

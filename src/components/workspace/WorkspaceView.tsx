@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Navbar } from '@/components/layout/Navbar'
-import { CodeEditor } from '@/features/editor/CodeEditor'
+import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader'
+import { EditorPane as CodeEditor } from '@/features/preview/EditorPane'
 import { PreviewRuntime } from '@/features/preview/PreviewRuntime'
 import { ErrorDrawer } from '@/features/diagnostics/ErrorDrawer'
 import { CommandPalette } from '@/components/command/CommandPalette'
@@ -28,12 +28,15 @@ interface WorkspaceViewProps {
 export function WorkspaceView({ initialProjectId }: WorkspaceViewProps) {
   const router = useRouter()
   const [code, setCode] = useState<string>(DEFAULT_TEMPLATE)
+  const [debouncedCode, setDebouncedCode] = useState<string>(DEFAULT_TEMPLATE)
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false)
   const [title, setTitle] = useState<string>('Interactive React Card')
   const [projectId, setProjectId] = useState<string | undefined>(initialProjectId)
   const [isSaved, setIsSaved] = useState(true)
   const [versionNumber, setVersionNumber] = useState(1)
   const [versions, setVersions] = useState<VersionSnapshot[]>([])
-  const [runtimeError, setRuntimeError] = useState<string | null>(null)
+  const [runtimeError, setRuntimeError] = useState<{ code?: string; message: string } | null>(null)
+  const [logs, setLogs] = useState<Array<{ id: string; type: string; message: string; timestamp: string }>>([])
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   // Split-pane Resizer state
@@ -43,6 +46,8 @@ export function WorkspaceView({ initialProjectId }: WorkspaceViewProps) {
 
   // Mobile / tablet tab switcher (< 900px)
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor')
+  const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop")
+  const [refreshToggle, setRefreshToggle] = useState(false)
 
   // Modals state
   const [isCommandOpen, setIsCommandOpen] = useState(false)
@@ -135,17 +140,26 @@ export function WorkspaceView({ initialProjectId }: WorkspaceViewProps) {
     }
   }
 
-  // Debounced auto-draft saving to localStorage
+
+  // Debounced auto-draft saving and preview code
   const draftTimer = useRef<NodeJS.Timeout | null>(null)
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null)
+
   const handleCodeChange = (newCode: string) => {
     setCode(newCode)
     setIsSaved(false)
 
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedCode(newCode)
+    }, 400) // 400ms debounce for Preview
+
     if (draftTimer.current) clearTimeout(draftTimer.current)
     draftTimer.current = setTimeout(() => {
       setLocalDraft(newCode)
-    }, 800)
+    }, 800) // 800ms debounce for Draft
   }
+
 
   const handleSave = useCallback(async () => {
     const res = await saveProjectAndVersion({
@@ -246,7 +260,12 @@ export function WorkspaceView({ initialProjectId }: WorkspaceViewProps) {
         isDragging ? 'select-none cursor-col-resize' : ''
       }`}
     >
-      <Navbar
+      <WorkspaceHeader
+        isDrawerOpen={isDrawerOpen}
+        onToggleDrawer={() => setIsDrawerOpen(!isDrawerOpen)}
+        viewport={viewport}
+        onChangeViewport={setViewport}
+        onRefresh={() => setRefreshToggle(prev => !prev)}
         title={title}
         isSaved={isSaved}
         versionNumber={versionNumber}
@@ -367,14 +386,20 @@ export function WorkspaceView({ initialProjectId }: WorkspaceViewProps) {
           } ${isDragging ? 'pointer-events-none' : ''}`}
         >
           <div className="flex-1 overflow-hidden">
-            <PreviewRuntime
-              code={code}
-              onErrorChange={(err) => setRuntimeError(err)}
+<PreviewRuntime
+              code={debouncedCode}
+              viewport={viewport}
+              refreshToggle={refreshToggle}
+              onErrorChange={(err) => setRuntimeError(typeof err === "string" ? err : null)}
+              onLogsChange={(l) => setLogs(l as any)}
             />
           </div>
           <ErrorDrawer
             error={runtimeError}
+            logs={logs}
             onClear={() => setRuntimeError(null)}
+            isOpen={isDrawerOpen || !!runtimeError}
+            setIsOpen={setIsDrawerOpen}
           />
         </div>
       </main>
