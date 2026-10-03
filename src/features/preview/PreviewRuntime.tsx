@@ -20,6 +20,8 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { transform } from 'sucrase'
+import { PreviewPane } from './PreviewPane'
+import { ViewportToolbar } from './ViewportToolbar'
 import { SandpackProvider, SandpackPreview } from '@codesandbox/sandpack-react'
 
 export type PreviewStatus = 'idle' | 'compiling' | 'ready' | 'compile-error' | 'runtime-error'
@@ -39,53 +41,6 @@ interface ConsoleLog {
 }
 
 // React Error Boundary for isolating user component errors
-interface ErrorBoundaryProps {
-  children: React.ReactNode
-  onError?: (err: Error) => void
-  resetKey: string | number
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean
-  error: Error | null
-}
-
-class PreviewErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props)
-    this.state = { hasError: false, error: null }
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error }
-  }
-
-  componentDidCatch(error: Error) {
-    this.props.onError?.(error)
-  }
-
-  componentDidUpdate(prevProps: ErrorBoundaryProps) {
-    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
-      this.setState({ hasError: false, error: null })
-    }
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="p-4 bg-rose-950/80 border border-rose-800 text-rose-200 rounded-lg text-xs font-mono max-w-md mx-auto my-6 shadow-xl">
-          <div className="font-semibold text-rose-100 flex items-center space-x-1.5 mb-1.5">
-            <span className="w-2 h-2 rounded-full bg-rose-500" />
-            <span>Runtime Error in Component</span>
-          </div>
-          <p className="whitespace-pre-wrap text-rose-300">{this.state.error?.message}</p>
-        </div>
-      )
-    }
-    return this.props.children
-  }
-}
-
 export function PreviewRuntime({ code, onErrorChange, onStatusChange }: PreviewRuntimeProps) {
   const [engine, setEngine] = useState<'direct' | 'sandpack'>('direct')
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
@@ -217,6 +172,10 @@ export function PreviewRuntime({ code, onErrorChange, onStatusChange }: PreviewR
         return 'w-full'
     }
   }
+
+  useEffect(() => {
+    handleRestart()
+  }, [refreshToggle])
 
   const handleRestart = () => {
     setRenderCount((prev) => prev + 1)
@@ -373,37 +332,7 @@ root.render(
 
         {/* Right: Viewport Controls, Dark/Light, Fullscreen */}
         <div className="flex items-center space-x-1.5">
-          {activeTab === 'preview' && (
-            <div className="flex items-center space-x-0.5 border border-zinc-800 rounded p-0.5 bg-zinc-950">
-              <button
-                onClick={() => setViewport('desktop')}
-                className={`p-1 rounded transition-colors ${
-                  viewport === 'desktop' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="Desktop View (100%)"
-              >
-                <Monitor className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setViewport('tablet')}
-                className={`p-1 rounded transition-colors ${
-                  viewport === 'tablet' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="Tablet View (768px)"
-              >
-                <Tablet className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setViewport('mobile')}
-                className={`p-1 rounded transition-colors ${
-                  viewport === 'mobile' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-                title="Mobile View (375px)"
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
+
 
           <button
             onClick={() => setThemeMode(themeMode === 'dark' ? 'light' : 'dark')}
@@ -442,75 +371,17 @@ root.render(
       {/* Main Sandbox Canvas */}
       <div className="flex-1 bg-zinc-950 flex items-center justify-center p-3 overflow-hidden relative w-full h-full">
         {activeTab === 'preview' ? (
-          <div
-            className={`h-full transition-all duration-150 border border-zinc-800 rounded-lg overflow-auto shadow-2xl flex flex-col items-center justify-center p-6 relative ${
-              themeMode === 'dark' ? 'bg-zinc-950 text-zinc-100' : 'bg-white text-zinc-900'
-            } ${getViewportWidth()}`}
-          >
-            {/* Compile or Runtime Error Banner */}
-            {activeError && (
-              <div className="absolute top-3 left-3 right-3 z-30 bg-rose-950/90 border border-rose-800 text-rose-200 text-xs p-3 rounded-lg shadow-xl backdrop-blur-sm flex items-start space-x-2">
-                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <div className="flex-1 overflow-hidden">
-                  <div className="font-semibold text-rose-100">
-                    {evaluated.error ? 'Compilation Error' : 'Runtime Exception'}
-                  </div>
-                  <pre className="mt-1 font-mono text-[11px] whitespace-pre-wrap overflow-auto max-h-28 text-rose-300">
-                    {activeError}
-                  </pre>
-                </div>
-              </div>
-            )}
-
-            {/* Direct In-Memory React Runtime (Default Engine) */}
-            {engine === 'direct' ? (
-              <PreviewErrorBoundary
-                key={`${renderCount}_${code.length}`}
-                resetKey={code}
-                onError={(err) => setRuntimeError({ code, message: err.message })}
-              >
-                {LiveComponent ? (
-                  <div className="w-full flex items-center justify-center">
-                    <LiveComponent />
-                  </div>
-                ) : (
-                  <div className="text-zinc-500 text-xs font-mono text-center">
-                    Waiting for valid component export...
-                  </div>
-                )}
-              </PreviewErrorBoundary>
-            ) : (
-              /* CodeSandbox Bundler Engine */
-              <div className="w-full h-full overflow-hidden">
-                <SandpackProvider
-                  key={sandpackKey}
-                  template="react-ts"
-                  theme="dark"
-                  files={sandpackFiles}
-                  customSetup={{
-                    dependencies: {
-                      'lucide-react': '^1.51.0',
-                      'clsx': '^2.1.1',
-                      'tailwind-merge': '^3.7.0',
-                      'class-variance-authority': '^0.7.1',
-                    },
-                  }}
-                  options={{
-                    recompileMode: 'delayed',
-                    recompileDelay: 300,
-                  }}
-                >
-                  <SandpackPreview
-                    showNavigator={false}
-                    showOpenInCodeSandbox={false}
-                    showRefreshButton={true}
-                    showRestartButton={true}
-                    style={{ height: '100%', width: '100%' }}
-                  />
-                </SandpackProvider>
-              </div>
-            )}
-          </div>
+          <PreviewPane
+            code={code}
+            engine={engine}
+            viewport={viewport}
+            themeMode={themeMode}
+            activeError={activeError}
+            evaluated={evaluated}
+            renderCount={renderCount}
+            sandpackKey={sandpackKey}
+            setRuntimeError={setRuntimeError}
+          />
         ) : (
           /* Live Console Tab */
           <div className="w-full h-full border border-zinc-800 rounded-lg overflow-hidden bg-zinc-900 flex flex-col">
